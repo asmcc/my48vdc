@@ -46,3 +46,6 @@ Based on the above described groundwork and two nice "templates" [daly_can.py](h
   - [config.ini](./SerialBattery/config.ini) <- Specific configuration
 
 ![20250223_GUI_V2.png](./screenshots/20250223_GUI_V2.png)
+![20250223_Firmware_version.png](./screenshots/20250223_Firmware_version.png)
+![20250223_History.png](./screenshots/20250223_History.png)
+![20250223_cell_voltages.png](./screenshots/20250223_cell_voltages.png)
