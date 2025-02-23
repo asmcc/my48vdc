@@ -42,6 +42,6 @@ If I find more time, I will describe here separately a step-by-step tutorial for
 Based on the above described groundwork and two nice "templates" [daly_can.py](https://github.com/mr-manuel/venus-os_dbus-serialbattery/blob/master/dbus-serialbattery/bms/daly_can.py) and [jkbms_can.py](https://github.com/mr-manuel/venus-os_dbus-serialbattery/blob/master/dbus-serialbattery/bms/jkbms_can.py) I wrote [my own python driver](./SerialBattery/bms/deye_can.py) to support the DEYE batteries under Venus OS:
 
   - [bms/deye_can.py](./SerialBattery/bms/deye_can.py)
-  - [dbus-serialbattery.py](./SerialBattery/dbus-serialbattery.py#L351;#L357) <- Main script with additions to support DEYE battery
+  - [dbus-serialbattery.py](./SerialBattery/dbus-serialbattery.py#L351-L357) <- Main script of dbus-serialbattery with additions to support DEYE battery
   - [config.ini](./SerialBattery/config.ini) <- Specific configuration
 
