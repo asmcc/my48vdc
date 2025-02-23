@@ -36,7 +36,7 @@ Psynosaur worked parallel and independed from Adminius on the INTERCAN. Psynosau
 If I find more time, I will describe here separately a step-by-step tutorial for such reverse engineering work including the required hardware and software. But it's only interesting for the real hardcore enthusiast here. Otherwise a summary about both CANs can be found here:
 
   - PCSCAN [EXCEL](./CAN/PCSCAN/deye_pcscan.xlsx) [PDF](./CAN/PCSCAN/deye_pcscan.pdf)
-  - INTERCAN [EXCEL](./CAN/INTERCAN/InterCAN_parameters_address_table.xls) [PDF](./CAN/INTERCAN/InterCAN_parameters_address_table.pdf)
+  - INTERCAN [EXCEL](./CAN/INTERCAN/InterCAN_parameters_address_table.xlsx) [PDF](./CAN/INTERCAN/InterCAN_parameters_address_table.pdf)
 
 ## Python driver for DEYE batteries under Venus OS
 Based on the above described groundwork and two nice "templates" [daly_can.py](https://github.com/mr-manuel/venus-os_dbus-serialbattery/blob/master/dbus-serialbattery/bms/daly_can.py) and [jkbms_can.py](https://github.com/mr-manuel/venus-os_dbus-serialbattery/blob/master/dbus-serialbattery/bms/jkbms_can.py) I wrote [my own python driver](./SerialBattery/bms/deye_can.py) to support the DEYE batteries under Venus OS:
