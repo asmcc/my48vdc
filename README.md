@@ -45,4 +45,4 @@ Based on the above described groundwork and two nice "templates" [daly_can.py](h
   - [dbus-serialbattery.py](./SerialBattery/dbus-serialbattery.py#L351-L357) <- Main script of dbus-serialbattery with additions to support DEYE battery
   - [config.ini](./SerialBattery/config.ini) <- Specific configuration
 
-![20250223_GUI_V2.png](./pictures/20250223_GUI_V2.png)
+![20250223_GUI_V2.png](./screenshots/20250223_GUI_V2.png)
