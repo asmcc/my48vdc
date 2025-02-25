@@ -36,7 +36,7 @@ class Deye_Can(Battery):
         self.intercan_timeout_count = 0              # Counter for achieved timeouts on INTERCAN bus 
         self.intercan_port = ""                      # INTERCAN bus interface
         self.cell_count = 1                          # initial number of cells
-        self.poll_interval = 6000                    # polling interval to read CAN messages in milliseconds
+        self.poll_interval = 1000                    # polling interval to read CAN messages in milliseconds
         self.type = self.BATTERYTYPE                 # battery type
         self.last_error_time = time.time()           # timer to reset error flag
         self.error_active = False                    # error flag
@@ -54,6 +54,7 @@ class Deye_Can(Battery):
         self.bms_alarms = bytes(8)                   # BMS alarms
         self.bat_alarms = bytes(8)                   # battery alarms
         self.cell_mid_voltage = FLOAT_CELL_VOLTAGE   # mean cell voltage
+        self.init_check = 0                          # collected value to check if all initialisation steps are done 
         self.init_done = False                       # init done flag
 
     def __del__(self):
@@ -93,11 +94,11 @@ class Deye_Can(Battery):
     INTER_CELL_VOLTAGES1 = "INTER_CELL_VOLTAGES1"    # Cell voltages 5-8
     INTER_CELL_VOLTAGES2 = "INTER_CELL_VOLTAGES2"    # Cell voltages 9-12
     INTER_CELL_VOLTAGES3 = "INTER_CELL_VOLTAGES3"    # Cell voltages 13-16
-    MESSAGES_TO_READ = 100                           # Number of CAN messages, to be received during a function call
+    MESSAGES_TO_READ = 25                            # Number of CAN messages, to be received during a function call
     ERROR_STATUS_TIMEOUT = 120                       # Timeout for errors and status bits
     INTERCAN_VALUES_TIMEOUT = 120                    # Timeout for INTERCAN values
     INTERCAN_TIMEOUT = 1000                          # Number of timeouts on INTERCAN until the interface will no loger be polled for new messages 
-    INTERCAN_SKIPED_RECVS = 25                       # Skiped recv calls for INTERCAN after timeout
+    INTERCAN_SKIPED_RECVS = 10                       # Skiped recv calls for INTERCAN after timeout
     
     CAN_FRAMES = {
         BMS_LIM_VOLT_CURR: [0x351],          # BMS limits: Maximal and minimal charge and discharge voltages, maximal charge and discharge currents
@@ -608,6 +609,7 @@ class Deye_Can(Battery):
                         self.current = unpack_from("<h", bytes([pcscan_msg.data[2], pcscan_msg.data[3]]))[0] / -10 * INVERT_CURRENT_MEASUREMENT
                         temperature_1 = unpack_from("<h", bytes([pcscan_msg.data[4], pcscan_msg.data[5]]))[0] / 10
                         self.to_temperature(1, temperature_1)
+                        self.init_check |= self.BITMASK[0]
                         bms_check |= self.BITMASK[2]
                         
                     elif pcscan_msg.arbitration_id in self.CAN_FRAMES[self.BMS_BAT_DATA]:
@@ -634,6 +636,7 @@ class Deye_Can(Battery):
                             bms_bat_type_ascii = "TYP " + str(bms_battery_type) # fallback for all other types as TYP XY
                         self.type = bms_manufacturer_name + bms_battery_pack_number + " " + bms_bat_type_ascii # compose the battery type based of all information
                         self.capacity = unpack_from("<H", bytes([pcscan_msg.data[6], pcscan_msg.data[7]]))[0] / 10
+                        self.init_check |= self.BITMASK[1]
                         bms_check |= self.BITMASK[3]
 
                     elif pcscan_msg.arbitration_id in self.CAN_FRAMES[self.BMS_MIN_MAX_CELL_DATA]:
@@ -642,6 +645,7 @@ class Deye_Can(Battery):
                             self.cell_max_voltage = unpack_from("<H", bytes([pcscan_msg.data[0], pcscan_msg.data[1]]))[0] / 1000
                             self.cell_min_voltage = unpack_from("<H", bytes([pcscan_msg.data[2], pcscan_msg.data[3]]))[0] / 1000
                             self.cell_mid_voltage = (self.cell_min_voltage + self.cell_max_voltage) / 2 # calculate mean cell voltage based on min and max values
+                            self.init_check |= self.BITMASK[2]
                             bms_check |= self.BITMASK[4]
                             mean_cell_volt_available = True
                             if self.cell_voltages_intercan is False and self.init_done is True:
@@ -657,6 +661,7 @@ class Deye_Can(Battery):
                         self.bms_software_version = f'{int(pcscan_msg.data[0]):X}'.rjust(2,'0') + f'{int(pcscan_msg.data[1]):X}'.rjust(2,'0')
                         self.custom_field = "BMS: " + self.bms_software_version + " Firmware: " + self.battery_software_version + " BOOT: " + self.battery_boot_version
                         self.hardware_version = f'{int(pcscan_msg.data[2]):X}'.rjust(2,'0') + f'{int(pcscan_msg.data[3]):X}'.rjust(2,'0')
+                        self.init_check |= self.BITMASK[3]
                         bms_check |= self.BITMASK[6]
 
                     elif pcscan_msg.arbitration_id in self.CAN_FRAMES[self.BMS_MODULE_STAT]:
@@ -698,6 +703,7 @@ class Deye_Can(Battery):
                         self.last_fet_status_time = time.time()
                         self.fet_status_active = True
                         self.to_fet_bits(battery_operation_mode, battery_balancing_status)
+                        self.init_check |= self.BITMASK[4]
                         bat_check |= self.BITMASK[1]
 
                     elif pcscan_msg.arbitration_id in self.CAN_FRAMES[self.BAT_SW_DATA]:
@@ -705,16 +711,19 @@ class Deye_Can(Battery):
                         self.battery_software_version = f'{int(pcscan_msg.data[0]):X}'.rjust(2,'0') + f'{int(pcscan_msg.data[1]):X}'.rjust(2,'0')
                         self.battery_boot_version = "".join(map(chr, bytes([pcscan_msg.data[3], pcscan_msg.data[4], pcscan_msg.data[5], pcscan_msg.data[6], pcscan_msg.data[7]])))
                         self.custom_field = "BMS: " + self.bms_software_version + " Firmware: " + self.battery_software_version + " BOOT: " + self.battery_boot_version
+                        self.init_check |= self.BITMASK[5]
                         bat_check |= self.BITMASK[2]
 
                     elif pcscan_msg.arbitration_id in self.CAN_FRAMES[self.BAT_SERIAL1]:
                         # Battery serial number part 1 of 2
                         self.battery_serial_number1 =  "".join(map(chr, pcscan_msg.data))
+                        self.init_check |= self.BITMASK[6]
                         bat_check |= self.BITMASK[3]
 
                     elif pcscan_msg.arbitration_id in self.CAN_FRAMES[self.BAT_SERIAL2]:
                         # Battery serial number part 2 of 2
                         self.battery_serial_number2 =  "".join(map(chr, pcscan_msg.data))
+                        self.init_check |= self.BITMASK[7]
                         bat_check |= self.BITMASK[4]
 
                     elif pcscan_msg.arbitration_id in self.CAN_FRAMES[self.BAT_ERR_WARN_ALM_STAT]:
@@ -748,6 +757,7 @@ class Deye_Can(Battery):
                         self.cell_min_no = unpack_from("<B", bytes([intercan_msg.data[5]]))[0] # cell number for minimal cell voltage
                         self.cell_mid_voltage = (self.cell_min_voltage + self.cell_max_voltage) / 2 # calculate mean cell voltage based on min and max values
                         mean_cell_volt_available = True
+                        self.init_check |= self.BITMASK[2]
                         if self.cell_voltages_intercan is False and self.init_done is True:
                             self.simulate_cell_voltages()  # simulate cell voltages, if no cell voltages were received over INTERCAN
                         if self.high_low_intercan is False and self.init_done is True:
@@ -805,11 +815,11 @@ class Deye_Can(Battery):
                         self.cell_voltages_intercan = True
                         intercan_check |= self.BITMASK[4]
 
-                if self.init_done is False and bms_check & self.BITMASK[2] and bms_check & self.BITMASK[3] and mean_cell_volt_available is True:
+                if self.init_done is False and self.init_check & 255 == 255:
                     self.init_done = self.init_battery_cell_settings() # init of battery cell settings after required values are received
                     logger.debug("self.init_done = %d", self.init_done)
-                # bitwise status for receiving of CAN messages on PCSCAN and INTERCAN. Each bit represents respectively one CAN message 
-                logger.debug("bms_check = %s, bat_check = %s, intercan_check = %s", "{:016b}".format(bms_check), "{:016b}".format(bat_check), "{:016b}".format(intercan_check))
+                # bitwise status for receiving of CAN messages on PCSCAN and INTERCAN and status the INITIALISATION. Each bit represents respectively one CAN message or one init condition 
+                logger.debug("bms_check = %s, bat_check = %s, intercan_check = %s, self.init_check = %s", "{:016b}".format(bms_check), "{:016b}".format(bat_check), "{:016b}".format(intercan_check), "{:016b}".format(self.init_check))
             return True
 
         except Exception:
